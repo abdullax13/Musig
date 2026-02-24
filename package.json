@@ -1,21 +1,19 @@
 {
   "name": "discord-music-bot",
   "version": "1.0.0",
-  "description": "Discord music bot (slash commands) for Railway",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node index.js",
-    "deploy:commands": "node deploy-commands.js"
+    "start": "node index.js"
   },
   "engines": {
-    "node": ">=18.17.0"
+    "node": ">=18"
   },
   "dependencies": {
-  "@discordjs/voice": "^0.17.0",
-  "discord.js": "^14.16.3",
-  "dotenv": "^16.4.5",
-  "ytdl-core": "npm:@distube/ytdl-core@latest",
-  "yt-search": "^2.12.1"
-}
+    "@discordjs/voice": "^0.17.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5",
+    "@distube/ytdl-core": "^4.15.0",
+    "yt-search": "^2.12.1"
+  }
 }
