@@ -4,7 +4,6 @@ const {
   Client,
   GatewayIntentBits,
   Events,
-  EmbedBuilder,
   REST,
   Routes,
   SlashCommandBuilder
@@ -20,13 +19,15 @@ const {
   entersState
 } = require("@discordjs/voice");
 
-const play = require("play-dl");
+const ytdl = require("@distube/ytdl-core");
+const yts = require("yt-search");
 
 const token = process.env.DISCORD_TOKEN;
 const clientId = process.env.CLIENT_ID;
+const guildId = process.env.GUILD_ID;
 
-if (!token || !clientId) {
-  console.error("Missing DISCORD_TOKEN or CLIENT_ID in Railway Variables");
+if (!token || !clientId || !guildId) {
+  console.error("Missing ENV variables");
   process.exit(1);
 }
 
@@ -34,10 +35,6 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
 });
 
-const queues = new Map();
-
-
-// ================= REGISTER SLASH COMMANDS =================
 async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
@@ -47,56 +44,51 @@ async function registerCommands() {
         opt.setName("query")
           .setDescription("Song name or URL")
           .setRequired(true)
-      ),
-
-    new SlashCommandBuilder().setName("skip").setDescription("Skip song"),
-    new SlashCommandBuilder().setName("stop").setDescription("Stop bot"),
-    new SlashCommandBuilder().setName("queue").setDescription("Show queue"),
-    new SlashCommandBuilder().setName("pause").setDescription("Pause"),
-    new SlashCommandBuilder().setName("resume").setDescription("Resume"),
-    new SlashCommandBuilder().setName("now").setDescription("Now playing")
-  ].map(cmd => cmd.toJSON());
+      )
+  ].map(c => c.toJSON());
 
   const rest = new REST({ version: "10" }).setToken(token);
 
   await rest.put(
-    Routes.applicationCommands(clientId),
+    Routes.applicationGuildCommands(clientId, guildId),
     { body: commands }
   );
 
-  console.log("Slash commands registered globally.");
+  console.log("Commands registered (guild).");
 }
-// ============================================================
-
 
 client.once(Events.ClientReady, async () => {
   console.log(`Logged in as ${client.user.tag}`);
   await registerCommands();
 });
 
-
-// ================= INTERACTIONS =================
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "play") {
     const voiceChannel = interaction.member.voice.channel;
-    if (!voiceChannel) {
+    if (!voiceChannel)
       return interaction.reply({ content: "ادخل روم فويس أول.", ephemeral: true });
-    }
 
     await interaction.deferReply();
 
-    const query = interaction.options.getString("query");
+    let query = interaction.options.getString("query");
+    let url;
 
-    const result = await play.search(query, { limit: 1 });
-    if (!result.length) {
-      return interaction.editReply("ما حصلت نتيجة.");
+    if (ytdl.validateURL(query)) {
+      url = query;
+    } else {
+      const result = await yts(query);
+      if (!result.videos.length)
+        return interaction.editReply("ما حصلت نتيجة.");
+      url = result.videos[0].url;
     }
 
-    const song = result[0];
-
-    const stream = await play.stream(song.url);
+    const stream = ytdl(url, {
+      filter: "audioonly",
+      quality: "highestaudio",
+      highWaterMark: 1 << 25
+    });
 
     const connection = joinVoiceChannel({
       channelId: voiceChannel.id,
@@ -107,35 +99,20 @@ client.on(Events.InteractionCreate, async interaction => {
     await entersState(connection, VoiceConnectionStatus.Ready, 20000);
 
     const player = createAudioPlayer({
-      behaviors: {
-        noSubscriber: NoSubscriberBehavior.Pause
-      }
+      behaviors: { noSubscriber: NoSubscriberBehavior.Pause }
     });
 
-    const resource = createAudioResource(stream.stream, {
-      inputType: stream.type
-    });
+    const resource = createAudioResource(stream);
 
     player.play(resource);
     connection.subscribe(player);
 
-    interaction.editReply(`🎶 Now Playing: **${song.title}**`);
-  }
-
-  if (interaction.commandName === "skip") {
-    interaction.reply("حالياً النسخة المبسطة ما فيها كيو.");
-  }
-
-  if (interaction.commandName === "stop") {
-    const connection = joinVoiceChannel({
-      channelId: interaction.member.voice.channel?.id,
-      guildId: interaction.guild.id,
-      adapterCreator: interaction.guild.voiceAdapterCreator
+    player.on(AudioPlayerStatus.Idle, () => {
+      connection.destroy();
     });
-    connection.destroy();
-    interaction.reply("تم الإيقاف.");
+
+    interaction.editReply("🎶 Started playing.");
   }
 });
-// =================================================
 
 client.login(token);
