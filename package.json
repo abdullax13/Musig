@@ -11,10 +11,11 @@
     "node": "20.x"
   },
   "dependencies": {
-    "@discordjs/voice": "^0.17.0",
-    "discord.js": "^14.16.3",
-    "dotenv": "^16.4.5",
-    "@distube/ytdl-core": "^4.15.0",
-    "yt-search": "^2.12.1"
-  }
+  "@discordjs/voice": "^0.17.0",
+  "discord.js": "^14.16.3",
+  "dotenv": "^16.4.5",
+  "@distube/ytdl-core": "^4.15.0",
+  "yt-search": "^2.12.1",
+  "libsodium-wrappers": "^0.7.13"
+   }
 }
