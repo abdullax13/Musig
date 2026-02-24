@@ -42,7 +42,37 @@ const queues = new Map();
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates]
 });
+const { REST, Routes, SlashCommandBuilder } = require("discord.js");
 
+async function registerCommands() {
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("play")
+      .setDescription("Play a song")
+      .addStringOption(opt =>
+        opt.setName("query").setDescription("Song name or URL").setRequired(true)
+      ),
+    new SlashCommandBuilder().setName("skip").setDescription("Skip song"),
+    new SlashCommandBuilder().setName("stop").setDescription("Stop bot"),
+    new SlashCommandBuilder().setName("queue").setDescription("Show queue"),
+    new SlashCommandBuilder().setName("pause").setDescription("Pause"),
+    new SlashCommandBuilder().setName("resume").setDescription("Resume"),
+    new SlashCommandBuilder().setName("now").setDescription("Now playing")
+  ].map(c => c.toJSON());
+
+  const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+
+  await rest.put(
+    Routes.applicationCommands(process.env.CLIENT_ID),
+    { body: commands }
+  );
+
+  console.log("Slash commands registered.");
+}
+
+client.once("ready", async () => {
+  await registerCommands();
+});
 client.once(Events.ClientReady, (c) => {
   console.log(`Logged in as ${c.user.tag}`);
 });
