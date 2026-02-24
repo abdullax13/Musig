@@ -1,13 +1,14 @@
 {
   "name": "discord-music-bot",
   "version": "1.0.0",
+  "description": "Discord Music Bot (Railway Stable)",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": "20.x"
   },
   "dependencies": {
     "@discordjs/voice": "^0.17.0",
